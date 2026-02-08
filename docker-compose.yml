@@ -1,9 +1,44 @@
+version: '3.8'
+
 services:
+  # ─────────────────────────────────────────────────────────────────────────────
+  # Next.js Application
+  # ─────────────────────────────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: naiwah-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - NEXT_PUBLIC_POCKETBASE_URL=http://pocketbase:8080
+      - AUTH_SECRET=${AUTH_SECRET}
+      - AUTH_URL=${AUTH_URL:-http://localhost:3000}
+    volumes:
+      - ./data:/app/data  # SQLite database
+      - ./app-settings.json:/app/app-settings.json
+    depends_on:
+      pocketbase:
+        condition: service_healthy
+    networks:
+      - naiwah-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ─────────────────────────────────────────────────────────────────────────────
+  # PocketBase (File Storage)
+  # ─────────────────────────────────────────────────────────────────────────────
   pocketbase:
     build:
       context: .
       dockerfile: Dockerfile.pocketbase
-    container_name: pocketbase
+    container_name: naiwah-pocketbase
     restart: unless-stopped
     ports:
       - "8090:8080"
@@ -11,8 +46,18 @@ services:
       - ./pb_data:/pb/pb_data
       - ./pb_migrations:/pb/pb_migrations
       - ./pb_hooks:/pb/pb_hooks
+    networks:
+      - naiwah-network
     healthcheck:
-      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/health" ]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+
+networks:
+  naiwah-network:
+    driver: bridge
+
+volumes:
+  app-data:
+  pb-data:
