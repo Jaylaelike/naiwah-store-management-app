@@ -46,6 +46,7 @@ next-env.d.ts
 user_db.csv
 user_update.sql
 dev.db
-pb_data
+app-settings.json
+backups/
 .agent
 .agents

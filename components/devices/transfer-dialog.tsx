@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowRightLeft } from 'lucide-react';
+import { ArrowRightLeft, Clock } from 'lucide-react';
 import { transferDevice } from '@/lib/actions/history';
 import { toast } from 'sonner';
 
@@ -40,7 +40,14 @@ export function TransferDialog({ deviceId, currentLocation }: TransferDialogProp
         try {
             const result = await transferDevice(deviceId, section, center, station);
             if (result.success) {
-                toast.success('Device transferred successfully');
+                if (result.pending) {
+                    toast.info('ส่งคำขอย้ายอุปกรณ์แล้ว รอการอนุมัติจากผู้ดูแลระบบ', {
+                        icon: <Clock className="h-4 w-4" />,
+                        duration: 5000,
+                    });
+                } else {
+                    toast.success(result.message || 'Device transferred successfully');
+                }
                 setOpen(false);
             } else {
                 toast.error(result.error || 'Failed to transfer device');
@@ -64,7 +71,7 @@ export function TransferDialog({ deviceId, currentLocation }: TransferDialogProp
                 <DialogHeader>
                     <DialogTitle>Transfer Device</DialogTitle>
                     <DialogDescription>
-                        Move this device to a new location.
+                        Move this device to a new location. Transfer requests require admin approval.
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit}>
@@ -99,7 +106,7 @@ export function TransferDialog({ deviceId, currentLocation }: TransferDialogProp
                     </div>
                     <DialogFooter>
                         <Button type="submit" disabled={loading}>
-                            {loading ? 'Transferring...' : 'Confirm Transfer'}
+                            {loading ? 'Submitting...' : 'Submit Transfer Request'}
                         </Button>
                     </DialogFooter>
                 </form>

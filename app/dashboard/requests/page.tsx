@@ -85,6 +85,28 @@ export default async function RequestsPage(props: RequestsPageProps) {
                                                         </div>
                                                     );
                                                 }
+                                                if (request.type === 'TRANSFER') {
+                                                    return (
+                                                        <div className="space-y-2 text-sm">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="flex-1 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 p-2">
+                                                                    <div className="text-xs font-medium text-red-600 dark:text-red-400">From</div>
+                                                                    <div className="font-medium">{payload.fromLocation || 'Unknown'}</div>
+                                                                </div>
+                                                                <span className="text-muted-foreground">→</span>
+                                                                <div className="flex-1 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 p-2">
+                                                                    <div className="text-xs font-medium text-green-600 dark:text-green-400">To</div>
+                                                                    <div className="font-medium">{payload.toLocation || 'Unknown'}</div>
+                                                                </div>
+                                                            </div>
+                                                            {request.device && (
+                                                                <div className="text-xs text-muted-foreground">
+                                                                    Device: {request.device.assetId} {request.device.deviceName ? `- ${request.device.deviceName}` : ''}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                }
                                                 return (
                                                     <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                                                         {Object.entries(payload).map(([key, value]) => {

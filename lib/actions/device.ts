@@ -171,6 +171,20 @@ export async function createDevice(prevState: DeviceState, formData: FormData) {
                 'INFO',
                 '/dashboard/admin/approvals'
             );
+
+            // Send email to admin
+            const { sendAdminRequestNotification } = await import('@/lib/email');
+            const createFields = ['assetId', 'deviceName', 'brand', 'model', 'status', 'section', 'center', 'station'];
+            const createDetails = createFields
+                .filter(f => (validatedFields.data as any)[f])
+                .map(f => `${f}: ${(validatedFields.data as any)[f]}`)
+                .join('\n');
+            await sendAdminRequestNotification(
+                'CREATE',
+                session?.user?.name || session?.user?.email || 'Unknown User',
+                `สร้างอุปกรณ์ใหม่\n${createDetails}`,
+                deviceName || assetId
+            );
             // return { message: 'Request Submitted for Approval' };
         } catch (error) {
             console.error('Failed to submit request:', error);
@@ -315,6 +329,20 @@ export async function updateDevice(id: number, prevState: DeviceState, formData:
                 'INFO',
                 '/dashboard/admin/approvals'
             );
+
+            // Send email to admin
+            const { sendAdminRequestNotification } = await import('@/lib/email');
+            const updateFields = ['assetId', 'status', 'function', 'deviceName', 'brand', 'model', 'serialNumber', 'ipAddress', 'macAddress', 'section', 'center', 'station', 'c_score', 'i_score', 'a_score', 'hostId'];
+            const updateDetails = updateFields
+                .filter(f => (validatedFields.data as any)[f] != null && (validatedFields.data as any)[f] !== '')
+                .map(f => `${f}: ${(validatedFields.data as any)[f]}`)
+                .join('\n');
+            await sendAdminRequestNotification(
+                'UPDATE',
+                session?.user?.name || session?.user?.email || 'Unknown User',
+                `อัปเดตอุปกรณ์ ID: ${id}\n${updateDetails}`,
+                deviceName || assetId
+            );
             // return { message: 'Update Request Submitted for Approval' };
         } catch (error) {
             console.error('Failed to submit request:', error);
@@ -400,6 +428,12 @@ export async function deleteDevice(id: number) {
 
     if (session?.user?.role !== 'Admin') {
         try {
+            // Get device info for email
+            const deviceForEmail = await prisma.device.findUnique({
+                where: { id },
+                select: { assetId: true, deviceName: true }
+            });
+
             await prisma.approvalRequest.create({
                 data: {
                     type: 'DELETE',
@@ -413,6 +447,15 @@ export async function deleteDevice(id: number) {
                 `A delete request for device ID ${id} has been submitted.`,
                 'WARNING',
                 '/dashboard/admin/approvals'
+            );
+
+            // Send email to admin
+            const { sendAdminRequestNotification } = await import('@/lib/email');
+            await sendAdminRequestNotification(
+                'DELETE',
+                session?.user?.name || session?.user?.email || 'Unknown User',
+                `ลบอุปกรณ์\nassetId: ${deviceForEmail?.assetId || 'N/A'}\ndeviceName: ${deviceForEmail?.deviceName || 'N/A'}`,
+                deviceForEmail?.deviceName || deviceForEmail?.assetId || `ID: ${id}`
             );
             // Ideally we should return a message, but delete action might be triggered differently. 
             // For now, assuming void return, forcing revalidate might show "Pending" state if implemented?
@@ -484,6 +527,12 @@ export async function updateDeviceCia(id: number, formData: FormData) {
         });
 
         try {
+            // Get device info for email
+            const deviceForCiaEmail = await prisma.device.findUnique({
+                where: { id },
+                select: { assetId: true, deviceName: true }
+            });
+
             await prisma.approvalRequest.create({
                 data: {
                     type: 'UPDATE',
@@ -498,6 +547,20 @@ export async function updateDeviceCia(id: number, formData: FormData) {
                 'INFO',
                 '/dashboard/admin/approvals'
             );
+
+            // Send email to admin
+            const { sendAdminRequestNotification } = await import('@/lib/email');
+            const ciaDetails = ['c_score', 'i_score', 'a_score', 'hostId']
+                .filter(f => (validatedFields.data as any)[f] != null && (validatedFields.data as any)[f] !== '')
+                .map(f => `${f}: ${(validatedFields.data as any)[f]}`)
+                .join('\n');
+            await sendAdminRequestNotification(
+                'UPDATE',
+                session?.user?.name || session?.user?.email || 'Unknown User',
+                `อัปเดต CIA Score\nอุปกรณ์: ${deviceForCiaEmail?.deviceName || deviceForCiaEmail?.assetId || `ID: ${id}`}\n${ciaDetails}`,
+                deviceForCiaEmail?.deviceName || deviceForCiaEmail?.assetId || `ID: ${id}`
+            );
+
             return { success: true, message: 'Request Submitted for Approval' };
         } catch (error) {
             console.error('Failed to submit request:', error);

@@ -110,8 +110,9 @@ async function main() {
                     return s;
                 };
 
-                // Fix image URL if needed (some are relative or full)
-                let imageUrl = clean(record.image_url);
+                // Build image URL from employeeId
+                const empId = clean(record.employeeId);
+                let imageUrl = empId ? `https://mis.thaipbs.or.th/files/emp/${empId}.jpg` : null;
 
                 insertUser.run(
                     username,
@@ -138,7 +139,82 @@ async function main() {
         console.log(`\n✅ CSV Import completed: ${successCount} successful, ${errorCount} failed.`);
 
     } else {
-        console.log(`\n⚠️  CSV file not found at ${csvPath}. Skipping CSV import.`);
+        // Fallback: try user_update.sql
+        const sqlPath = path.join(process.cwd(), 'user_update.sql');
+        if (fs.existsSync(sqlPath)) {
+            console.log(`\n📂 CSV not found, falling back to ${sqlPath}...`);
+            const sqlContent = fs.readFileSync(sqlPath, 'utf-8');
+
+            // Parse PostgreSQL-style INSERT VALUES tuples
+            // Format: ('id', 'email', 'username', 'password', 'createdAt', 'updatedAt', 'employeeId', 'Department', 'Division', 'EngName', 'Mobile_Phone', 'Position', 'Section', 'ThaiName', 'image_url')
+            const tupleRegex = /\(\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*,\s*'([^']*)'\s*\)/g;
+
+            const insertUserSql = db.prepare(`
+                INSERT INTO User (
+                    username, password, email, role,
+                    employeeId, department, division, engName, thaiName,
+                    mobilePhone, position, section, imageUrl,
+                    createdAt, updatedAt
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+                ON CONFLICT(username) DO UPDATE SET
+                    email = excluded.email,
+                    department = excluded.department,
+                    division = excluded.division,
+                    engName = excluded.engName,
+                    thaiName = excluded.thaiName,
+                    mobilePhone = excluded.mobilePhone,
+                    position = excluded.position,
+                    section = excluded.section,
+                    imageUrl = excluded.imageUrl,
+                    updatedAt = datetime('now')
+            `);
+
+            let sqlSuccess = 0;
+            let sqlError = 0;
+            let match;
+
+            while ((match = tupleRegex.exec(sqlContent)) !== null) {
+                try {
+                    const [, , email, username, rawPassword, , , employeeId, department, division, engName, mobilePhone, position, section, thaiName, imageUrl] = match;
+
+                    if (!username) continue;
+
+                    const clean = (val: string) => {
+                        const s = val.trim();
+                        if (s === 'NULL' || s === 'None' || s === '-' || s === '') return null;
+                        return s;
+                    };
+
+                    const hashedPassword = await hashPassword(rawPassword || username);
+                    const cleanEmployeeId = clean(employeeId);
+                    const empImageUrl = cleanEmployeeId ? `https://mis.thaipbs.or.th/files/emp/${cleanEmployeeId}.jpg` : null;
+
+                    insertUserSql.run(
+                        username,
+                        hashedPassword,
+                        clean(email),
+                        'User',
+                        cleanEmployeeId,
+                        clean(department),
+                        clean(division),
+                        clean(engName),
+                        clean(thaiName),
+                        clean(mobilePhone),
+                        clean(position),
+                        clean(section),
+                        empImageUrl
+                    );
+                    sqlSuccess++;
+                } catch (err: any) {
+                    console.error(`❌ Error importing user from SQL:`, err.message);
+                    sqlError++;
+                }
+            }
+            console.log(`\n✅ SQL Import completed: ${sqlSuccess} successful, ${sqlError} failed.`);
+        } else {
+            console.log(`\n⚠️  No user data file found (tried ${csvPath} and user_update.sql). Skipping user import.`);
+        }
     }
 
     // 3. Import devices from CSV
@@ -160,10 +236,12 @@ async function main() {
         const insertDevice = db.prepare(`
             INSERT INTO Device (
                 uuid, assetId, status, function, deviceName, brand, model, 
-                serialNumber, ipAddress, macAddress, section, center, station,
+                serialNumber, ipAddress, macAddress, 
+                c_score, i_score, a_score, hostId,
+                section, center, station,
                 createdAt, updatedAt
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
             ON CONFLICT(assetId) DO UPDATE SET
                 status = excluded.status,
                 function = excluded.function,
@@ -173,6 +251,10 @@ async function main() {
                 serialNumber = excluded.serialNumber,
                 ipAddress = excluded.ipAddress,
                 macAddress = excluded.macAddress,
+                c_score = excluded.c_score,
+                i_score = excluded.i_score,
+                a_score = excluded.a_score,
+                hostId = excluded.hostId,
                 section = excluded.section,
                 center = excluded.center,
                 station = excluded.station,
@@ -199,6 +281,15 @@ async function main() {
                 else if (rawStatus === 'ส่งซ่อม') status = 'Repair';
                 else if (rawStatus === 'ตัดจำหน่าย') status = 'Disposed';
 
+                // Build hostId from IP octets columns (IP, ส่วนงานฯ, สถานี, อุปกรณ์ (Host_ID))
+                const hostIdRaw = record['อุปกรณ์ (Host_ID)'] || null;
+                const ipCol = record['IP'] || null;
+                let hostId: string | null = null;
+                if (hostIdRaw || ipCol) {
+                    // Use the full IP or compose from octets
+                    hostId = hostIdRaw ? String(hostIdRaw).trim() : ipCol;
+                }
+
                 insertDevice.run(
                     uuidv7(),
                     assetId,
@@ -210,6 +301,10 @@ async function main() {
                     record['Serial Number'] || null,
                     record['IP Address Scan'] || null,
                     record['Mac Address Scan'] || null,
+                    record['C'] || null,
+                    record['I'] || null,
+                    record['A'] || null,
+                    hostId,
                     record['Section'] || null,
                     record['Center'] || null,
                     record['Station'] || null

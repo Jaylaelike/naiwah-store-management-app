@@ -1,251 +1,227 @@
-import nodemailer from "nodemailer";
+import emailjs from '@emailjs/nodejs';
+import { isEmailEnabled } from '@/lib/settings';
+import { prisma } from '@/lib/prisma';
+
+// ── EmailJS Configuration ──────────────────────────────────────────────────
+const EMAILJS_SERVICE_ID = 'service_r09uh1j';
+const EMAILJS_TEMPLATE_ID = 'template_15rk9b2';
+const EMAILJS_PUBLIC_KEY = '3ANASFW_eugmQJaRm';
+const EMAILJS_PRIVATE_KEY = 'bWtfNys36aTo4rUFQrjNh';
+const EMAILJS_ICON_URL = 'https://56fwnhyzti.ufs.sh/f/aK4w8mNL3AiPEv5Cf4c9WON2pJKgdI63ReTV9fSa7PvqDr8A';
+
+// ── Helper: Get Admin Emails from Database ──────────────────────────────
+export async function getAdminEmails(): Promise<string[]> {
+    try {
+        const admins = await prisma.user.findMany({
+            where: { 
+                role: 'Admin',
+                email: { not: null }
+            },
+            select: { email: true },
+        });
+        const emails = admins
+            .map(a => a.email)
+            .filter((email): email is string => email !== null && email !== '');
+        
+        if (emails.length === 0) {
+            console.warn('[EmailService] No admin emails found in database');
+        }
+        return emails;
+    } catch (error) {
+        console.error('[EmailService] Failed to fetch admin emails:', error);
+        return [];
+    }
+}
 
 export interface EmailRequestBody {
+    // Device info
+    asset_id?: string;
+    device_name?: string;
+    brand?: string;
+    model?: string;
+    serial_number?: string;
+    status?: string;
+    // Location
+    section?: string;
+    center?: string;
+    station?: string;
+    // Repair details
+    description?: string;
+    repair_date?: string;
+    logged_by?: string;
+    // General
     posting_date: string;
-    station_name: string;
-    facility_name: string;
-    detail_data: string;
-    start_time: string;
-    end_time: string;
-    sum_time: string;
     user_to: string[];
     cc?: string[];
 }
 
-// Shared Transporter Configuration
-function createTransporter() {
-    return nodemailer.createTransport({
-        host: "webmail.thaipbs.or.th",
-        port: 587,
-        secure: false, // true for 465, false for other ports
-        auth: {
-            user: "nocadmin@thaipbs.or.th",
-            pass: "noctpbs",
-        },
-        tls: {
-            rejectUnauthorized: false,
-        },
-    });
+// ── Shared helper to send via EmailJS ──────────────────────────────────
+async function sendViaEmailJS(templateParams: Record<string, string>) {
+    const response = await emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        templateParams,
+        {
+            publicKey: EMAILJS_PUBLIC_KEY,
+            privateKey: EMAILJS_PRIVATE_KEY,
+        }
+    );
+    return response;
 }
 
-// Email HTML template for Repair/Downtime
-function generateDowntimeEmailHtml(data: EmailRequestBody): string {
-    return `
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html dir="ltr" lang="th">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NOC Report Downtime</title>
-</head>
-<body style="
-    background-color: #f4f4f5;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell, 'Helvetica Neue', sans-serif;
-    margin: 0;
-    padding: 20px;
-">
-    <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="max-width: 600px; margin: 0 auto;">
-        <tbody>
-            <tr>
-                <td>
-                    <!-- Logo Section -->
-                    <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="padding: 30px 20px; text-align: center;">
-                        <tbody>
-                            <tr>
-                                <td>
-                                    <img
-                                        src="https://cdn.prod.website-files.com/603c87adb15be3cb0b3ed9b5/662b28e467d3404ab010bc54_110.png"
-                                        style="
-                                            width: 120px;
-                                            height: 120px;
-                                            border-radius: 50%;
-                                        "
-                                        alt="Thai PBS Logo"
-                                    />
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <!-- Main Content Card -->
-                    <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="
-                        background-color: #ffffff;
-                        border: 1px solid rgba(0, 0, 0, 0.1);
-                        border-radius: 12px;
-                        overflow: hidden;
-                    ">
-                        <tbody>
-                            <tr>
-                                <td style="padding: 30px;">
-                                    <!-- Header -->
-                                    <h1 style="
-                                        font-size: 24px;
-                                        font-weight: bold;
-                                        text-align: center;
-                                        color: #1f2937;
-                                        margin: 0 0 8px 0;
-                                    ">
-                                        แจ้งเหตุขัดข้องในการให้บริการฯ
-                                    </h1>
-                                    <p style="
-                                        font-size: 14px;
-                                        text-align: center;
-                                        color: #6b7280;
-                                        margin: 0 0 24px 0;
-                                    ">
-                                        NOC Downtime Report
-                                    </p>
-
-                                    <!-- Info Table -->
-                                    <table width="100%" border="0" cellpadding="8" cellspacing="0" style="
-                                        border-collapse: collapse;
-                                        font-size: 14px;
-                                    ">
-                                        <tbody>
-                                            <tr style="border-bottom: 1px solid #e5e7eb;">
-                                                <td style="font-weight: 600; color: #374151; width: 40%;">วันที่บันทึก</td>
-                                                <td style="color: #1f2937;">${data.posting_date}</td>
-                                            </tr>
-                                            <tr style="border-bottom: 1px solid #e5e7eb;">
-                                                <td style="font-weight: 600; color: #374151;">สถานี</td>
-                                                <td style="color: #1f2937;">${data.station_name}</td>
-                                            </tr>
-                                            <tr style="border-bottom: 1px solid #e5e7eb;">
-                                                <td style="font-weight: 600; color: #374151;">ผู้ให้บริการ</td>
-                                                <td style="color: #1f2937;">${data.facility_name}</td>
-                                            </tr>
-                                            <tr style="border-bottom: 1px solid #e5e7eb;">
-                                                <td style="font-weight: 600; color: #374151;">รายละเอียดเหตุการณ์</td>
-                                                <td style="color: #1f2937;">${data.detail_data}</td>
-                                            </tr>
-                                            <tr style="border-bottom: 1px solid #e5e7eb;">
-                                                <td style="font-weight: 600; color: #374151;">เวลาเริ่มต้นออกอากาศไม่ได้</td>
-                                                <td style="color: #dc2626; font-weight: 500;">${data.start_time}</td>
-                                            </tr>
-                                            <tr style="border-bottom: 1px solid #e5e7eb;">
-                                                <td style="font-weight: 600; color: #374151;">เวลาสิ้นสุดออกอากาศไม่ได้</td>
-                                                <td style="color: #16a34a; font-weight: 500;">${data.end_time}</td>
-                                            </tr>
-                                            <tr>
-                                                <td style="font-weight: 600; color: #374151;">รวมเวลาหยุดออกอากาศ</td>
-                                                <td style="
-                                                    color: #ffffff;
-                                                    background-color: #ef4444;
-                                                    padding: 4px 12px;
-                                                    border-radius: 4px;
-                                                    display: inline-block;
-                                                    font-weight: 600;
-                                                ">${data.sum_time}</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-
-                    <!-- Footer -->
-                    <p style="
-                        font-size: 12px;
-                        text-align: center;
-                        color: rgba(0, 0, 0, 0.5);
-                        margin-top: 24px;
-                    ">
-                        © 2025 | Engineering Thai PBS
-                    </p>
-                </td>
-            </tr>
-        </tbody>
-    </table>
-</body>
-</html>
-    `;
-}
-
+// ── 1. Repair / Downtime Email ─────────────────────────────────────────
 export async function sendRepairEmail(data: EmailRequestBody) {
+    if (!isEmailEnabled()) {
+        console.log('[EmailService] Email is disabled. Skipping repair email.');
+        return { success: true, skipped: true };
+    }
+
     try {
-        console.log('[EmailService] Preparing to send repair email...', data.station_name);
+        console.log('[EmailService] Preparing to send repair email...', data.device_name || data.asset_id);
 
         if (!data.user_to || data.user_to.length === 0) {
             console.warn('[EmailService] No recipients defined.');
         }
 
-        const emailHtml = generateDowntimeEmailHtml(data);
-        const transporter = createTransporter();
+        const location = [data.section, data.center, data.station].filter(Boolean).join(' > ') || '-';
 
-        const mailOptions = {
-            from: "NOCadmin@thaipbs.or.th",
-            to: data.user_to,
-            cc: data.cc?.length ? data.cc : undefined,
-            subject: `แจ้งเหตุขัดข้องในการให้บริการฯ - ${data.station_name}`,
-            html: emailHtml,
+        const templateParams = {
+            email_type: 'REPAIR',
+            image_url: EMAILJS_ICON_URL,
+            to_email: data.user_to.join(', '),
+            cc_email: data.cc?.join(', ') || '',
+            subject: `แจ้งซ่อมอุปกรณ์ - ${data.device_name || data.asset_id || 'Unknown'}`,
+            title: 'แจ้งซ่อมอุปกรณ์',
+            subtitle: 'NAIWAH Asset Management System',
+            posting_date: data.posting_date,
+            asset_id: data.asset_id || '-',
+            device_name: data.device_name || '-',
+            brand: data.brand || '-',
+            model: data.model || '-',
+            serial_number: data.serial_number || '-',
+            status: data.status || 'Repair',
+            location: location,
+            description: data.description || '-',
+            repair_date: data.repair_date || data.posting_date,
+            logged_by: data.logged_by || '-',
+            action_color: '#f59e0b',
+            // Fields used by other email types – send empty
+            request_type: '',
+            details: '',
+            approver_name: '',
+            action: 'REPAIR',
+            performed_by: data.logged_by || '-',
+            updated_fields: '',
         };
 
-        const info = await transporter.sendMail(mailOptions);
-        console.log('[EmailService] Repair email sent:', info.messageId);
+        const response = await sendViaEmailJS(templateParams);
+        console.log('[EmailService] Repair email sent. Status:', response.status);
 
-        return { success: true, messageId: info.messageId };
+        return { success: true, status: response.status };
     } catch (error) {
         console.error('[EmailService] Error sending repair email:', error);
         return {
             success: false,
-            error: error instanceof Error ? error.message : "Failed to send email"
+            error: error instanceof Error ? error.message : 'Failed to send email',
         };
     }
 }
 
+// ── Field name translations ───────────────────────────────────────────
+const FIELD_LABELS: Record<string, string> = {
+    assetId: 'รหัสครุภัณฑ์',
+    deviceName: 'ชื่ออุปกรณ์',
+    brand: 'ยี่ห้อ',
+    model: 'รุ่น',
+    serialNumber: 'Serial Number',
+    status: 'สถานะ',
+    function: 'ประเภท',
+    ipAddress: 'IP Address',
+    macAddress: 'MAC Address',
+    section: 'แผนก',
+    center: 'ศูนย์',
+    station: 'สถานี',
+    c_score: 'C-Score',
+    i_score: 'I-Score',
+    a_score: 'A-Score',
+    hostId: 'Host ID',
+};
+
+// ── 2. Approval Email ──────────────────────────────────────────────────
 export async function sendApprovalEmail(
     email: string,
     requestType: string,
     details: string,
     approverName: string
 ) {
+    if (!isEmailEnabled()) {
+        console.log('[EmailService] Email is disabled. Skipping approval email.');
+        return { success: true, skipped: true };
+    }
+
     try {
         console.log(`[EmailService] Sending approval email to ${email}`);
 
-        const subject = `Your Request has been Approved: ${requestType}`;
-        const html = `
-<!DOCTYPE html>
-<html>
-<head>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
-        .header { background-color: #22c55e; color: white; padding: 15px; text-align: center; border-radius: 8px 8px 0 0; }
-        .content { padding: 20px; }
-        .footer { text-align: center; font-size: 12px; color: #666; margin-top: 20px; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h2>Request Approved</h2>
-        </div>
-        <div class="content">
-            <p>Hello,</p>
-            <p>Your request (<strong>${requestType}</strong>) has been approved and processed successfully.</p>
-            <p><strong>Details:</strong><br/>${details}</p>
-            <p><strong>Approved By:</strong> ${approverName}</p>
-            <p>You can view the updated status in your dashboard.</p>
-        </div>
-        <div class="footer">
-            <p>© 2025 NAIWAH Store Management</p>
-        </div>
-    </div>
-</body>
-</html>
-        `;
+        // Format details as HTML table rows
+        const formattedFields = details
+            .split('\n')
+            .filter(Boolean)
+            .map(line => {
+                const colonIdx = line.indexOf(':');
+                if (colonIdx > 0) {
+                    const field = line.substring(0, colonIdx).trim();
+                    let value = line.substring(colonIdx + 1).trim();
+                    // Skip lines with null/undefined/empty values
+                    if (!value || value === 'null' || value === 'undefined') {
+                        return null;
+                    }
+                    const label = FIELD_LABELS[field] || field;
+                    return `<tr><td style="padding:8px 12px;font-weight:600;color:#374151;white-space:nowrap;border-bottom:1px solid #e5e7eb;">${label}</td><td style="padding:8px 12px;color:#1f2937;border-bottom:1px solid #e5e7eb;">${value}</td></tr>`;
+                }
+                return `<tr><td colspan="2" style="padding:8px 12px;color:#1f2937;font-weight:500;border-bottom:1px solid #e5e7eb;">${line}</td></tr>`;
+            })
+            .filter(Boolean)
+            .join('');
 
-        const transporter = createTransporter();
+        const updatedFieldsHtml = formattedFields
+            ? `<table style="width:100%;border-collapse:collapse;font-size:14px;">${formattedFields}</table>`
+            : '';
 
-        await transporter.sendMail({
-            from: "NOCadmin@thaipbs.or.th",
-            to: email,
-            subject: subject,
-            html: html,
-        });
+        const actionLabels: Record<string, string> = {
+            CREATE: 'สร้างอุปกรณ์ใหม่',
+            UPDATE: 'อัปเดตข้อมูล',
+            DELETE: 'ลบอุปกรณ์',
+            TRANSFER: 'โอนย้ายอุปกรณ์',
+        };
 
-        console.log(`[EmailService] Approval email sent to ${email}`);
+        const templateParams = {
+            email_type: 'APPROVAL',
+            image_url: EMAILJS_ICON_URL,
+            to_email: email,
+            cc_email: '',
+            subject: `คำขอได้รับการอนุมัติ: ${actionLabels[requestType] || requestType}`,
+            title: 'คำขอได้รับการอนุมัติ',
+            subtitle: actionLabels[requestType] || requestType,
+            posting_date: new Date().toLocaleDateString('th-TH'),
+            station_name: '',
+            facility_name: '',
+            detail_data: '',
+            start_time: '',
+            end_time: '',
+            sum_time: '',
+            request_type: requestType,
+            details: details,
+            approver_name: approverName,
+            action: requestType,
+            device_name: '',
+            performed_by: approverName,
+            action_color: '#22c55e',
+            updated_fields: updatedFieldsHtml,
+        };
+
+        const response = await sendViaEmailJS(templateParams);
+        console.log(`[EmailService] Approval email sent to ${email}. Status:`, response.status);
+
         return { success: true };
     } catch (error) {
         console.error('[EmailService] Failed to send approval email:', error);
@@ -253,69 +229,171 @@ export async function sendApprovalEmail(
     }
 }
 
+// ── 3. Device Notification Email ───────────────────────────────────────
 export async function sendDeviceNotification(
     action: 'CREATE' | 'UPDATE' | 'DELETE',
     deviceName: string,
     details: string,
     performedBy: string
 ) {
+    if (!isEmailEnabled()) {
+        console.log('[EmailService] Email is disabled. Skipping device notification.');
+        return { success: true, skipped: true };
+    }
+
     try {
         console.log(`[EmailService] Sending device notification for ${action} on ${deviceName}`);
 
-        // Default recipient is Admin
-        const to = "nocadmin@thaipbs.or.th";
+        const color =
+            action === 'DELETE' ? '#ef4444' : action === 'CREATE' ? '#22c55e' : '#3b82f6';
 
-        const subject = `Device Notification: ${action} - ${deviceName}`;
-        const color = action === 'DELETE' ? '#ef4444' : action === 'CREATE' ? '#22c55e' : '#3b82f6';
+        // Format details as a readable field list for the template
+        const formattedFields = details
+            .split('\n')
+            .filter(Boolean)
+            .map(line => {
+                const [field, ...rest] = line.split(':');
+                return rest.length ? `<tr><td style="padding:6px 10px;font-weight:600;color:#374151;white-space:nowrap;">${field.trim()}</td><td style="padding:6px 10px;color:#1f2937;">${rest.join(':').trim()}</td></tr>` : `<tr><td colspan="2" style="padding:6px 10px;color:#1f2937;">${line}</td></tr>`;
+            })
+            .join('');
 
-        const html = `
-<!DOCTYPE html>
-<html>
-<head>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
-        .header { background-color: ${color}; color: white; padding: 15px; text-align: center; border-radius: 8px 8px 0 0; }
-        .content { padding: 20px; }
-        .footer { text-align: center; font-size: 12px; color: #666; margin-top: 20px; }
-        .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; background-color: ${color}; color: white; font-weight: bold; font-size: 0.8em; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h2>Device Notification</h2>
-        </div>
-        <div class="content">
-            <p>A device action has been performed.</p>
-            <p><strong>Action:</strong> <span class="badge">${action}</span></p>
-            <p><strong>Device:</strong> ${deviceName}</p>
-            <p><strong>Performed By:</strong> ${performedBy}</p>
-            <hr style="border: 0; border-top: 1px solid #eee; margin: 15px 0;">
-            <p><strong>Details:</strong></p>
-            <pre style="background: #f4f4f5; padding: 10px; border-radius: 4px; overflow-x: auto;">${details}</pre>
-        </div>
-        <div class="footer">
-            <p>© 2025 NAIWAH Store Management</p>
-        </div>
-    </div>
-</body>
-</html>
-        `;
+        const updatedFieldsHtml = formattedFields
+            ? `<table style="width:100%;border-collapse:collapse;font-size:14px;">${formattedFields}</table>`
+            : '';
 
-        const transporter = createTransporter();
+        // Get admin emails from database
+        const adminEmails = await getAdminEmails();
+        if (adminEmails.length === 0) {
+            console.warn('[EmailService] No admin emails found. Skipping device notification.');
+            return { success: false, error: 'No admin emails configured' };
+        }
 
-        await transporter.sendMail({
-            from: "NOCadmin@thaipbs.or.th",
-            to: to,
-            subject: subject,
-            html: html,
-        });
+        const templateParams = {
+            email_type: 'DEVICE',
+            image_url: EMAILJS_ICON_URL,
+            to_email: adminEmails.join(', '),
+            cc_email: '',
+            subject: `Device Notification: ${action} - ${deviceName}`,
+            title: 'Device Notification',
+            subtitle: `${action === 'CREATE' ? 'สร้างอุปกรณ์ใหม่' : action === 'UPDATE' ? 'อัปเดตข้อมูลอุปกรณ์' : 'ลบอุปกรณ์'}`,
+            posting_date: new Date().toLocaleDateString('th-TH'),
+            station_name: '',
+            facility_name: '',
+            detail_data: '',
+            start_time: '',
+            end_time: '',
+            sum_time: '',
+            request_type: '',
+            details: details,
+            approver_name: '',
+            action: action,
+            device_name: deviceName,
+            performed_by: performedBy,
+            action_color: color,
+            updated_fields: updatedFieldsHtml,
+        };
 
-        console.log(`[EmailService] Device notification sent for ${deviceName}`);
+        const response = await sendViaEmailJS(templateParams);
+        console.log(`[EmailService] Device notification sent for ${deviceName}. Status:`, response.status);
+
         return { success: true };
     } catch (error) {
         console.error('[EmailService] Failed to send device notification:', error);
+        return { success: false, error };
+    }
+}
+
+// ── 4. Admin Request Notification Email ────────────────────────────────
+export async function sendAdminRequestNotification(
+    requestType: 'CREATE' | 'UPDATE' | 'DELETE' | 'TRANSFER',
+    requestedBy: string,
+    details: string,
+    deviceInfo?: string
+) {
+    if (!isEmailEnabled()) {
+        console.log('[EmailService] Email is disabled. Skipping admin request notification.');
+        return { success: true, skipped: true };
+    }
+
+    try {
+        console.log(`[EmailService] Sending admin request notification for ${requestType}`);
+
+        const actionLabels: Record<string, string> = {
+            CREATE: 'สร้างอุปกรณ์ใหม่',
+            UPDATE: 'แก้ไขข้อมูลอุปกรณ์',
+            DELETE: 'ลบอุปกรณ์',
+            TRANSFER: 'โอนย้ายอุปกรณ์',
+        };
+
+        const actionColors: Record<string, string> = {
+            CREATE: '#22c55e',
+            UPDATE: '#3b82f6',
+            DELETE: '#ef4444',
+            TRANSFER: '#f59e0b',
+        };
+
+        // Format details as HTML table rows
+        const formattedFields = details
+            .split('\n')
+            .filter(Boolean)
+            .map(line => {
+                const colonIdx = line.indexOf(':');
+                if (colonIdx > 0) {
+                    const field = line.substring(0, colonIdx).trim();
+                    let value = line.substring(colonIdx + 1).trim();
+                    if (!value || value === 'null' || value === 'undefined') {
+                        return null;
+                    }
+                    const label = FIELD_LABELS[field] || field;
+                    return `<tr><td style="padding:8px 12px;font-weight:600;color:#374151;white-space:nowrap;border-bottom:1px solid #e5e7eb;">${label}</td><td style="padding:8px 12px;color:#1f2937;border-bottom:1px solid #e5e7eb;">${value}</td></tr>`;
+                }
+                return `<tr><td colspan="2" style="padding:8px 12px;color:#1f2937;font-weight:500;border-bottom:1px solid #e5e7eb;">${line}</td></tr>`;
+            })
+            .filter(Boolean)
+            .join('');
+
+        const updatedFieldsHtml = formattedFields
+            ? `<table style="width:100%;border-collapse:collapse;font-size:14px;">${formattedFields}</table>`
+            : '';
+
+        // Get admin emails from database
+        const adminEmails = await getAdminEmails();
+        if (adminEmails.length === 0) {
+            console.warn('[EmailService] No admin emails found. Skipping admin request notification.');
+            return { success: false, error: 'No admin emails configured' };
+        }
+
+        const templateParams = {
+            email_type: 'ADMIN_REQUEST',
+            image_url: EMAILJS_ICON_URL,
+            to_email: adminEmails.join(', '),
+            cc_email: '',
+            subject: `ขอแก้ไขเปลี่ยนแปลงข้อมูลอุปกรณ์ - ${actionLabels[requestType]}`,
+            title: 'ขอแก้ไขเปลี่ยนแปลงข้อมูลอุปกรณ์',
+            subtitle: actionLabels[requestType],
+            posting_date: new Date().toLocaleDateString('th-TH'),
+            station_name: '',
+            facility_name: '',
+            detail_data: '',
+            start_time: '',
+            end_time: '',
+            sum_time: '',
+            request_type: requestType,
+            details: details,
+            approver_name: '',
+            action: requestType,
+            device_name: deviceInfo || '-',
+            performed_by: requestedBy,
+            action_color: actionColors[requestType],
+            updated_fields: updatedFieldsHtml,
+        };
+
+        const response = await sendViaEmailJS(templateParams);
+        console.log(`[EmailService] Admin request notification sent. Status:`, response.status);
+
+        return { success: true };
+    } catch (error) {
+        console.error('[EmailService] Failed to send admin request notification:', error);
         return { success: false, error };
     }
 }

@@ -2,7 +2,7 @@ import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, FileText, Settings, ShieldAlert, FileCheck } from 'lucide-react';
+import { Users, FileText, Settings, ShieldAlert, FileCheck, DatabaseBackup } from 'lucide-react';
 import { getDashboardStats } from '@/lib/actions/dashboard';
 
 export default async function AdminDashboardPage() {
@@ -37,6 +37,22 @@ export default async function AdminDashboardPage() {
             icon: FileCheck,
             color: 'text-orange-600',
             bg: 'bg-orange-100',
+        },
+        {
+            title: 'สำรองและกู้คืนข้อมูล',
+            description: 'สำรองและกู้คืนฐานข้อมูล SQLite',
+            href: '/dashboard/admin/backup',
+            icon: DatabaseBackup,
+            color: 'text-purple-600',
+            bg: 'bg-purple-100',
+        },
+        {
+            title: 'ตั้งค่าระบบ',
+            description: 'จัดการการตั้งค่าอีเมลและระบบ',
+            href: '/dashboard/admin/settings',
+            icon: Settings,
+            color: 'text-gray-600',
+            bg: 'bg-gray-100',
         },
     ];
 

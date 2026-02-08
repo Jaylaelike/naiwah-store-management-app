@@ -4,11 +4,12 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Upload, X } from 'lucide-react';
+import { Loader2, Upload, X, Camera } from 'lucide-react';
 import { pb } from '@/lib/pocketbase';
 import { addDeviceImage } from '@/lib/actions/image';
 import { toast } from 'sonner';
 import Image from 'next/image';
+import { CameraCapture } from '@/components/devices/camera-capture';
 
 interface ImageUploadProps {
     deviceId: number;
@@ -69,14 +70,22 @@ export function ImageUpload({ deviceId }: ImageUploadProps) {
     return (
         <div className="grid w-full max-w-sm items-center gap-1.5">
             <Label htmlFor="picture">Device Images</Label>
-            <Input
-                id="picture"
-                type="file"
-                multiple
-                accept="image/*"
-                onChange={handleFileSelect}
-                disabled={uploading}
-            />
+            <div className="flex gap-3 items-start">
+                <Input
+                    id="picture"
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handleFileSelect}
+                    disabled={uploading}
+                    className="flex-1"
+                />
+                <CameraCapture
+                    onCapture={(file) => {
+                        setSelectedFiles(prev => [...prev, file]);
+                    }}
+                />
+            </div>
 
             {selectedFiles.length > 0 && (
                 <div className="mt-4 space-y-4">

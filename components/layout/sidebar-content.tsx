@@ -13,7 +13,9 @@ import {
     LogOut,
     Users,
     Calendar,
-    Shield
+    Shield,
+    DatabaseBackup,
+    Settings
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSession, signOut } from 'next-auth/react';
@@ -41,6 +43,8 @@ export function SidebarContent({ className, onLinkClick }: SidebarContentProps) 
     const adminLinks = [
         { href: '/dashboard/admin', label: 'ผู้ดูแลระบบ', icon: ShieldCheck },
         { href: '/dashboard/admin/users', label: 'จัดการผู้ใช้', icon: Users },
+        { href: '/dashboard/admin/backup', label: 'สำรอง/กู้คืนข้อมูล', icon: DatabaseBackup },
+        { href: '/dashboard/admin/settings', label: 'ตั้งค่าระบบ', icon: Settings },
     ];
 
     return (

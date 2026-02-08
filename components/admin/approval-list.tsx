@@ -67,6 +67,12 @@ export function ApprovalList({ requests }: ApprovalListProps) {
                                         <div className="font-semibold">Date</div>
                                         <div>{new Date(request.createdAt).toLocaleDateString()}</div>
                                     </div>
+                                    {request.device && (
+                                        <div>
+                                            <div className="font-semibold">Device</div>
+                                            <div>{request.device.assetId} {request.device.deviceName ? `- ${request.device.deviceName}` : ''}</div>
+                                        </div>
+                                    )}
                                     <div className="col-span-2">
                                         <div className="font-semibold mb-2">Request Details</div>
                                         <div className="rounded-md border p-4 bg-muted/30">
@@ -76,6 +82,29 @@ export function ApprovalList({ requests }: ApprovalListProps) {
                                                     return (
                                                         <div className="text-sm text-muted-foreground">
                                                             Requesting deletion of device with ID: <span className="font-mono font-medium text-foreground">{request.deviceId}</span>
+                                                        </div>
+                                                    );
+                                                }
+                                                if (request.type === 'TRANSFER') {
+                                                    return (
+                                                        <div className="space-y-3 text-sm">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="flex-1 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 p-3">
+                                                                    <div className="text-xs font-medium text-red-600 dark:text-red-400 mb-1">From</div>
+                                                                    <div className="font-medium">{payload.fromLocation || 'Unknown'}</div>
+                                                                    {payload.fromSection && <div className="text-xs text-muted-foreground">Section: {payload.fromSection}</div>}
+                                                                    {payload.fromCenter && <div className="text-xs text-muted-foreground">Center: {payload.fromCenter}</div>}
+                                                                    {payload.fromStation && <div className="text-xs text-muted-foreground">Station: {payload.fromStation}</div>}
+                                                                </div>
+                                                                <span className="text-lg text-muted-foreground">→</span>
+                                                                <div className="flex-1 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 p-3">
+                                                                    <div className="text-xs font-medium text-green-600 dark:text-green-400 mb-1">To</div>
+                                                                    <div className="font-medium">{payload.toLocation || 'Unknown'}</div>
+                                                                    {payload.toSection && <div className="text-xs text-muted-foreground">Section: {payload.toSection}</div>}
+                                                                    {payload.toCenter && <div className="text-xs text-muted-foreground">Center: {payload.toCenter}</div>}
+                                                                    {payload.toStation && <div className="text-xs text-muted-foreground">Station: {payload.toStation}</div>}
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     );
                                                 }

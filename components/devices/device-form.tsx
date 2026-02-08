@@ -25,7 +25,9 @@ import {
 import { createDevice, updateDevice, DeviceState } from '@/lib/actions/device';
 import { Device } from '@prisma/client';
 import Link from 'next/link';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Camera } from 'lucide-react';
+import { CameraCapture } from '@/components/devices/camera-capture';
+import { useState } from 'react';
 
 const formSchema = z.object({
     assetId: z.string().min(1, 'Asset ID is required'),
@@ -53,6 +55,7 @@ type DeviceFormProps = {
 
 export function DeviceForm({ device }: DeviceFormProps) {
     const initialState: DeviceState = { message: null, errors: {} };
+    const [capturedFile, setCapturedFile] = useState<File | null>(null);
     // @ts-ignore - useActionState types can be tricky with server actions depending on react version
     const [state, formAction, isPending] = useActionState(
         device ? updateDevice.bind(null, device.id) : createDevice,
@@ -74,9 +77,9 @@ export function DeviceForm({ device }: DeviceFormProps) {
             section: device?.section || '',
             center: device?.center || '',
             station: device?.station || '',
-            c_score: device?.c_score || '',
-            i_score: device?.i_score || '',
-            a_score: device?.a_score || '',
+            c_score: device?.c_score?.match(/^\d/)?.[0] || '',
+            i_score: device?.i_score?.match(/^\d/)?.[0] || '',
+            a_score: device?.a_score?.match(/^\d/)?.[0] || '',
             hostId: device?.hostId || '',
         },
     });
@@ -317,9 +320,18 @@ export function DeviceForm({ device }: DeviceFormProps) {
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Confidentiality (C)</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="C Score" {...field} />
-                                    </FormControl>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select C Score" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="1">1 - ต่ำ (Low)</SelectItem>
+                                            <SelectItem value="2">2 - ปานกลาง (Medium)</SelectItem>
+                                            <SelectItem value="3">3 - สูง (High)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                     <FormMessage />
                                 </FormItem>
                             )}
@@ -330,9 +342,18 @@ export function DeviceForm({ device }: DeviceFormProps) {
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Integrity (I)</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="I Score" {...field} />
-                                    </FormControl>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select I Score" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="1">1 - ต่ำ (Low)</SelectItem>
+                                            <SelectItem value="2">2 - ปานกลาง (Medium)</SelectItem>
+                                            <SelectItem value="3">3 - สูง (High)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                     <FormMessage />
                                 </FormItem>
                             )}
@@ -343,9 +364,18 @@ export function DeviceForm({ device }: DeviceFormProps) {
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Availability (A)</FormLabel>
-                                    <FormControl>
-                                        <Input placeholder="A Score" {...field} />
-                                    </FormControl>
+                                    <Select onValueChange={field.onChange} value={field.value}>
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select A Score" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="1">1 - ต่ำ (Low)</SelectItem>
+                                            <SelectItem value="2">2 - ปานกลาง (Medium)</SelectItem>
+                                            <SelectItem value="3">3 - สูง (High)</SelectItem>
+                                        </SelectContent>
+                                    </Select>
                                     <FormMessage />
                                 </FormItem>
                             )}
@@ -358,10 +388,35 @@ export function DeviceForm({ device }: DeviceFormProps) {
                     <div className="grid grid-cols-1 gap-6">
                         <FormItem>
                             <FormLabel>Upload Image</FormLabel>
-                            <FormControl>
-                                <Input type="file" name="image" accept="image/*" />
-                            </FormControl>
-                            <FormDescription>Upload a device image (optional)</FormDescription>
+                            <div className="flex gap-3 items-start">
+                                <FormControl>
+                                    <Input
+                                        type="file"
+                                        name="image"
+                                        accept="image/*"
+                                        className="flex-1"
+                                        key={capturedFile ? capturedFile.name : 'file-input'}
+                                    />
+                                </FormControl>
+                                <CameraCapture
+                                    onCapture={(file) => {
+                                        setCapturedFile(file);
+                                        // Set the file to the hidden input via DataTransfer
+                                        const dataTransfer = new DataTransfer();
+                                        dataTransfer.items.add(file);
+                                        const fileInput = document.querySelector<HTMLInputElement>('input[name="image"]');
+                                        if (fileInput) {
+                                            fileInput.files = dataTransfer.files;
+                                        }
+                                    }}
+                                />
+                            </div>
+                            {capturedFile && (
+                                <p className="text-sm text-muted-foreground mt-1">
+                                    📷 {capturedFile.name}
+                                </p>
+                            )}
+                            <FormDescription>Upload or capture a device image (optional)</FormDescription>
                             <FormMessage />
                         </FormItem>
                     </div>

@@ -72,6 +72,30 @@ export async function approveRequest(requestId: number) {
                 await tx.device.delete({
                     where: { id: request.deviceId },
                 });
+            } else if (request.type === 'TRANSFER') {
+                if (!request.deviceId) throw new Error('Device ID missing for TRANSFER');
+                
+                const device = await tx.device.findUnique({ where: { id: request.deviceId } });
+                if (!device) throw new Error('Device not found');
+
+                await tx.device.update({
+                    where: { id: request.deviceId },
+                    data: {
+                        section: data.toSection || null,
+                        center: data.toCenter || null,
+                        station: data.toStation || null,
+                        status: 'Active',
+                    },
+                });
+
+                await tx.transferHistory.create({
+                    data: {
+                        deviceId: request.deviceId,
+                        fromLocation: data.fromLocation,
+                        toLocation: data.toLocation,
+                        approvedById: parseInt(session.user.id),
+                    },
+                });
             }
 
             // Update request status
@@ -98,12 +122,38 @@ export async function approveRequest(requestId: number) {
             const { sendApprovalEmail } = await import('@/lib/email');
 
             let details = '';
+            let deviceInfo = '';
+            
+            // Get device info for context
+            if (request.deviceId) {
+                const device = await prisma.device.findUnique({ 
+                    where: { id: request.deviceId },
+                    select: { assetId: true, deviceName: true }
+                });
+                if (device) {
+                    deviceInfo = device.deviceName || device.assetId || `ID: ${request.deviceId}`;
+                }
+            }
+
             if (request.type === 'CREATE') {
-                details = `New Device Created: ${data.assetId || 'Unknown ID'}`;
+                const fields = ['assetId', 'deviceName', 'brand', 'model', 'status', 'section', 'center', 'station'];
+                const createDetails = fields
+                    .filter(f => data[f] != null && data[f] !== '')
+                    .map(f => `${f}: ${data[f]}`)
+                    .join('\n');
+                details = `สร้างอุปกรณ์ใหม่\n${createDetails}`;
             } else if (request.type === 'UPDATE') {
-                details = `Device Update for ID: ${request.deviceId}`;
+                // Parse the payload to show what fields changed
+                const fields = ['assetId', 'status', 'function', 'deviceName', 'brand', 'model', 'serialNumber', 'ipAddress', 'macAddress', 'section', 'center', 'station', 'c_score', 'i_score', 'a_score', 'hostId'];
+                const changedFields = fields
+                    .filter(f => data[f] != null && data[f] !== '')
+                    .map(f => `${f}: ${data[f]}`)
+                    .join('\n');
+                details = `อัปเดตอุปกรณ์: ${deviceInfo}\n${changedFields || 'No changes'}`;
             } else if (request.type === 'DELETE') {
-                details = `Device Deleted ID: ${request.deviceId}`;
+                details = `ลบอุปกรณ์: ${deviceInfo}`;
+            } else if (request.type === 'TRANSFER') {
+                details = `โอนย้ายอุปกรณ์: ${deviceInfo}\nจาก: ${data.fromLocation}\nไปยัง: ${data.toLocation}`;
             }
 
             await sendApprovalEmail(

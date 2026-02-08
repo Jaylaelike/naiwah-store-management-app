@@ -130,27 +130,29 @@ export async function logRepair(deviceId: number, description: string) {
         );
 
         // Send Email Notification
-        // Since we don't have explicit email input in the form, we'll try to determine recipients.
-        // For now, we'll send to "nocadmin@thaipbs.or.th" as per reference, or perhaps a configured list.
-        // The user request example had `user_to` in the body. I'll hardcode a default for demonstration
-        // or attempt to find relevant users. Let's start with a safe default or checking env.
+        // Get admin emails from database
+        const { sendRepairEmail, getAdminEmails } = await import('@/lib/email');
+        const adminEmails = await getAdminEmails();
 
         // Construct email data
         const emailData = {
             posting_date: new Date().toLocaleDateString('th-TH'),
-            station_name: device.station || 'Unknown Station',
-            facility_name: device.center || device.section || 'Unknown Facility',
-            detail_data: description,
-            start_time: new Date().toLocaleTimeString('th-TH'), // Approximation
-            end_time: 'N/A', // Not known at start of repair
-            sum_time: 'N/A',
-            user_to: ['nocadmin@thaipbs.or.th'], // Default recipient as per user example logic, adjust if needed
+            asset_id: device.assetId,
+            device_name: device.deviceName || undefined,
+            brand: device.brand || undefined,
+            model: device.model || undefined,
+            serial_number: device.serialNumber || undefined,
+            status: 'Repair',
+            section: device.section || undefined,
+            center: device.center || undefined,
+            station: device.station || undefined,
+            description: description,
+            repair_date: new Date().toLocaleDateString('th-TH'),
+            logged_by: session?.user?.name || session?.user?.email || 'Unknown User',
+            user_to: adminEmails.length > 0 ? adminEmails : [''],
             cc: [],
         };
 
-        // Dynamically import to avoid circular dependency issues if any, or just standard import at top.
-        // We'll standard import at top.
-        const { sendRepairEmail } = await import('@/lib/email');
         await sendRepairEmail(emailData);
 
         revalidatePath(`/dashboard/devices/${deviceId}`);
@@ -182,30 +184,77 @@ export async function transferDevice(
         const fromLocation = [device.section, device.center, device.station].filter(Boolean).join(' > ') || 'Unknown';
         const toLocation = [section, center, station].filter(Boolean).join(' > ');
 
-        await prisma.$transaction([
-            // Update device location
-            prisma.device.update({
-                where: { id: deviceId },
-                data: {
-                    section,
-                    center,
-                    station,
-                    status: 'Active', // Assume transfer implies active use, or keep as is? Let's default to Active if transferring.
-                },
-            }),
-            // Log transfer
-            prisma.transferHistory.create({
-                data: {
-                    deviceId,
-                    fromLocation,
-                    toLocation,
-                    approvedById: userId,
-                },
-            }),
-        ]);
+        const isAdmin = session.user.role === 'Admin';
 
-        revalidatePath(`/dashboard/devices/${deviceId}`);
-        return { success: true };
+        if (isAdmin) {
+            // Admin can transfer directly without approval
+            await prisma.$transaction([
+                prisma.device.update({
+                    where: { id: deviceId },
+                    data: {
+                        section,
+                        center,
+                        station,
+                        status: 'Active',
+                    },
+                }),
+                prisma.transferHistory.create({
+                    data: {
+                        deviceId,
+                        fromLocation,
+                        toLocation,
+                        approvedById: userId,
+                    },
+                }),
+            ]);
+
+            revalidatePath(`/dashboard/devices/${deviceId}`);
+            return { success: true, message: 'Device transferred successfully' };
+        } else {
+            // Non-admin: create approval request
+            const payload = JSON.stringify({
+                fromSection: device.section,
+                fromCenter: device.center,
+                fromStation: device.station,
+                fromLocation,
+                toSection: section,
+                toCenter: center,
+                toStation: station,
+                toLocation,
+            });
+
+            await prisma.approvalRequest.create({
+                data: {
+                    type: 'TRANSFER',
+                    status: 'PENDING',
+                    payload,
+                    deviceId,
+                    requestedById: userId,
+                },
+            });
+
+            // Notify admins
+            const { notifyAdmins } = await import('@/lib/notifications');
+            await notifyAdmins(
+                'Transfer Request',
+                `${session.user.name || 'A user'} requested to transfer device ${device.assetId} from "${fromLocation}" to "${toLocation}"`,
+                'WARNING',
+                '/dashboard/admin/approvals'
+            );
+
+            // Send email to admin
+            const { sendAdminRequestNotification } = await import('@/lib/email');
+            await sendAdminRequestNotification(
+                'TRANSFER',
+                session?.user?.name || session?.user?.email || 'Unknown User',
+                `โอนย้ายอุปกรณ์\nassetId: ${device.assetId}\ndeviceName: ${device.deviceName || '-'}\nจาก: ${fromLocation}\nไปยัง: ${toLocation}`,
+                device.deviceName || device.assetId
+            );
+
+            revalidatePath('/dashboard/requests');
+            revalidatePath('/dashboard/admin/approvals');
+            return { success: true, pending: true, message: 'Transfer request submitted for admin approval' };
+        }
     } catch (error) {
         console.error('Failed to transfer device:', error);
         return { success: false, error: 'Failed to transfer device' };
