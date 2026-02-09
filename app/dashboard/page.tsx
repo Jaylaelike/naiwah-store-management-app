@@ -5,8 +5,9 @@ export const dynamic = 'force-dynamic';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Box, Wrench, Archive, Activity, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getDashboardStats } from '@/lib/actions/dashboard';
+import { getDashboardStats, getAnalyticsData } from '@/lib/actions/dashboard';
 import { DashboardActions } from '@/components/dashboard/dashboard-actions';
+import { DashboardCharts } from '@/components/dashboard/dashboard-charts';
 
 export default async function DashboardPage() {
     const session = await auth();
@@ -16,6 +17,7 @@ export default async function DashboardPage() {
     }
 
     const dashboardStats = await getDashboardStats();
+    const analyticsData = await getAnalyticsData();
 
     const stats = [
         {
@@ -87,6 +89,9 @@ export default async function DashboardPage() {
                     );
                 })}
             </div>
+
+            {/* Analytics Charts */}
+            <DashboardCharts data={analyticsData} />
 
             {/* Quick Actions */}
             <DashboardActions role={session.user.role} />

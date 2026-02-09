@@ -3,17 +3,17 @@ import { isEmailEnabled } from '@/lib/settings';
 import { prisma } from '@/lib/prisma';
 
 // ── EmailJS Configuration ──────────────────────────────────────────────────
-const EMAILJS_SERVICE_ID = 'service_r09uh1j';
-const EMAILJS_TEMPLATE_ID = 'template_15rk9b2';
-const EMAILJS_PUBLIC_KEY = '3ANASFW_eugmQJaRm';
-const EMAILJS_PRIVATE_KEY = 'bWtfNys36aTo4rUFQrjNh';
+const EMAILJS_SERVICE_ID = process.env.EMAILJS_SERVICE_ID || '';
+const EMAILJS_TEMPLATE_ID = process.env.EMAILJS_TEMPLATE_ID || '';
+const EMAILJS_PUBLIC_KEY = process.env.EMAILJS_PUBLIC_KEY || '';
+const EMAILJS_PRIVATE_KEY = process.env.EMAILJS_PRIVATE_KEY || '';
 const EMAILJS_ICON_URL = 'https://56fwnhyzti.ufs.sh/f/aK4w8mNL3AiPEv5Cf4c9WON2pJKgdI63ReTV9fSa7PvqDr8A';
 
 // ── Helper: Get Admin Emails from Database ──────────────────────────────
 export async function getAdminEmails(): Promise<string[]> {
     try {
         const admins = await prisma.user.findMany({
-            where: { 
+            where: {
                 role: 'Admin',
                 email: { not: null }
             },
@@ -22,7 +22,7 @@ export async function getAdminEmails(): Promise<string[]> {
         const emails = admins
             .map(a => a.email)
             .filter((email): email is string => email !== null && email !== '');
-        
+
         if (emails.length === 0) {
             console.warn('[EmailService] No admin emails found in database');
         }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -11,10 +11,17 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { ArrowRightLeft, Clock } from 'lucide-react';
 import { transferDevice } from '@/lib/actions/history';
+import { getUniqueLocations, UniqueLocations } from '@/lib/actions/location';
 import { toast } from 'sonner';
 
 interface TransferDialogProps {
@@ -32,6 +39,21 @@ export function TransferDialog({ deviceId, currentLocation }: TransferDialogProp
     const [center, setCenter] = useState(currentLocation?.center || '');
     const [station, setStation] = useState(currentLocation?.station || '');
     const [loading, setLoading] = useState(false);
+    const [locations, setLocations] = useState<UniqueLocations>({
+        sections: [],
+        centers: [],
+        stations: [],
+    });
+    const [locationsLoading, setLocationsLoading] = useState(false);
+
+    useEffect(() => {
+        if (open) {
+            setLocationsLoading(true);
+            getUniqueLocations()
+                .then(setLocations)
+                .finally(() => setLocationsLoading(false));
+        }
+    }, [open]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -78,34 +100,64 @@ export function TransferDialog({ deviceId, currentLocation }: TransferDialogProp
                     <div className="grid gap-4 py-4">
                         <div className="grid gap-2">
                             <Label htmlFor="section">Section</Label>
-                            <Input
-                                id="section"
+                            <Select
                                 value={section}
-                                onChange={(e) => setSection(e.target.value)}
-                                placeholder="e.g. IT"
-                            />
+                                onValueChange={setSection}
+                                disabled={locationsLoading}
+                            >
+                                <SelectTrigger id="section">
+                                    <SelectValue placeholder="เลือก Section" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {locations.sections.map((s) => (
+                                        <SelectItem key={s} value={s}>
+                                            {s}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="center">Center</Label>
-                            <Input
-                                id="center"
+                            <Select
                                 value={center}
-                                onChange={(e) => setCenter(e.target.value)}
-                                placeholder="e.g. HQ"
-                            />
+                                onValueChange={setCenter}
+                                disabled={locationsLoading}
+                            >
+                                <SelectTrigger id="center">
+                                    <SelectValue placeholder="เลือก Center" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {locations.centers.map((c) => (
+                                        <SelectItem key={c} value={c}>
+                                            {c}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="station">Station</Label>
-                            <Input
-                                id="station"
+                            <Select
                                 value={station}
-                                onChange={(e) => setStation(e.target.value)}
-                                placeholder="e.g. Desk 1"
-                            />
+                                onValueChange={setStation}
+                                disabled={locationsLoading}
+                            >
+                                <SelectTrigger id="station">
+                                    <SelectValue placeholder="เลือก Station" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {locations.stations.map((st) => (
+                                        <SelectItem key={st} value={st}>
+                                            {st}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button type="submit" disabled={loading}>
+                        <Button type="submit" disabled={loading || locationsLoading}>
                             {loading ? 'Submitting...' : 'Submit Transfer Request'}
                         </Button>
                     </DialogFooter>
