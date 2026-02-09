@@ -1,5 +1,7 @@
 import { DeviceForm } from '@/components/devices/device-form';
 import { getDeviceById } from '@/lib/actions/device';
+
+export const dynamic = 'force-dynamic';
 import { notFound } from 'next/navigation';
 
 export default async function EditDevicePage({ params }: { params: Promise<{ id: string }> }) {

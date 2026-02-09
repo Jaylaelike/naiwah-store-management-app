@@ -6,12 +6,21 @@ import process from 'process';
 const globalForPrisma = global as unknown as { prisma: PrismaClient };
 
 function createPrismaClient() {
-    // Use absolute path to database file
-    const dbPath = path.join(process.cwd(), 'dev.db');
+    // Get database URL from environment variable
+    // Defaults: 
+    // - Production/Docker: file:./data/dev.db
+    // - Development: file:./dev.db
+    const databaseUrl = process.env.DATABASE_URL || 'file:./dev.db';
+    
+    // Extract path from file:// URL
+    const dbPath = databaseUrl.replace('file:', '');
+    const absolutePath = path.isAbsolute(dbPath) 
+        ? dbPath 
+        : path.join(process.cwd(), dbPath);
 
     // Correct instantiation for Prisma 7 adapter: pass config object with url
     const adapter = new PrismaBetterSqlite3({
-        url: 'file:' + dbPath
+        url: 'file:' + absolutePath
     });
 
     return new PrismaClient({

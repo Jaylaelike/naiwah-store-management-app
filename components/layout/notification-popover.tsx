@@ -9,7 +9,7 @@ import {
     PopoverTrigger,
 } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
+import { cn, apiUrl } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 
 interface Notification {
@@ -30,7 +30,7 @@ export function NotificationPopover() {
 
     const fetchNotifications = async () => {
         try {
-            const res = await fetch('/api/notifications');
+            const res = await fetch(apiUrl('/api/notifications'));
             if (res.ok) {
                 const data = await res.json();
                 setNotifications(data.notifications);
@@ -49,7 +49,7 @@ export function NotificationPopover() {
 
     const markAsRead = async (id: number, link?: string) => {
         try {
-            await fetch(`/api/notifications/${id}/read`, { method: 'POST' });
+            await fetch(apiUrl(`/api/notifications/${id}/read`), { method: 'POST' });
 
             // Optimistic update
             setNotifications(prev =>

@@ -1,4 +1,4 @@
-version: '3.8'
+# Docker Compose configuration for NAIWAH Store App
 
 services:
   # ─────────────────────────────────────────────────────────────────────────────
@@ -11,12 +11,14 @@ services:
     container_name: naiwah-app
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "3005:3005"
     environment:
       - NODE_ENV=production
+      - DATABASE_URL=file:./data/dev.db
       - NEXT_PUBLIC_POCKETBASE_URL=http://pocketbase:8080
       - AUTH_SECRET=${AUTH_SECRET}
-      - AUTH_URL=${AUTH_URL:-http://localhost:3000}
+      - AUTH_URL=${AUTH_URL:-http://localhost:3005/naiwah}
+      - NEXTAUTH_URL=${AUTH_URL:-http://localhost:3005/naiwah}
     volumes:
       - ./data:/app/data  # SQLite database
       - ./app-settings.json:/app/app-settings.json
@@ -26,7 +28,7 @@ services:
     networks:
       - naiwah-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3005/naiwah"]
       interval: 30s
       timeout: 10s
       retries: 3

@@ -6,6 +6,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Loader2, Mail, Settings } from 'lucide-react';
 import { toast } from 'sonner';
+import { apiUrl } from '@/lib/utils';
 
 interface AppSettings {
     emailEnabled: boolean;
@@ -18,7 +19,7 @@ export default function SettingsPage() {
 
     const fetchSettings = useCallback(async () => {
         try {
-            const res = await fetch('/api/settings');
+            const res = await fetch(apiUrl('/api/settings'));
             if (res.ok) {
                 setSettings(await res.json());
             }
@@ -39,7 +40,7 @@ export default function SettingsPage() {
         setSettings((s) => s ? { ...s, [key]: value } : s);
 
         try {
-            const res = await fetch('/api/settings', {
+            const res = await fetch(apiUrl('/api/settings'), {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ [key]: value }),

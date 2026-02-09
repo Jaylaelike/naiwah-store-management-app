@@ -2,6 +2,7 @@ import type { NextAuthConfig } from 'next-auth';
 
 // Edge-compatible config (no database adapters)
 export const authConfig: NextAuthConfig = {
+    trustHost: true, // Required for reverse proxy support
     pages: {
         signIn: '/login',
         error: '/login',

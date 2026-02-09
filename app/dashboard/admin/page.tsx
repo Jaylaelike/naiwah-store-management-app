@@ -1,5 +1,7 @@
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
+
+export const dynamic = 'force-dynamic';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, FileText, Settings, ShieldAlert, FileCheck, DatabaseBackup } from 'lucide-react';

@@ -1,5 +1,7 @@
 import { getDevices } from '@/lib/actions/device';
 import { columns } from './columns';
+
+export const dynamic = 'force-dynamic';
 import { DataTable } from './data-table';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';

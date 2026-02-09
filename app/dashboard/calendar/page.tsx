@@ -1,6 +1,8 @@
 import { getCalendarEvents } from '@/lib/actions/calendar'
 import CalendarClientWrapper from './calendar-client-wrapper'
 
+export const dynamic = 'force-dynamic'
+
 export default async function CalendarPage() {
     const events = await getCalendarEvents()
 

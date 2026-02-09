@@ -7,7 +7,7 @@ async function main() {
 
     // 1. Get a device
     const device = await prisma.device.findFirst({
-        where: { uuid: { not: null } }
+        where: { uuid: { not: null } as never }
     });
 
     if (!device) {

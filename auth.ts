@@ -6,6 +6,10 @@ import { authConfig } from './auth.config';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
     ...authConfig,
+    // Must match Next.js basePath + /api/auth
+    // Only use basePath in production to match Next.js config
+    ...(process.env.NODE_ENV === 'production' && { basePath: '/naiwah/api/auth' }),
+    trustHost: true, // Support reverse proxy
     providers: [
         Credentials({
             name: 'credentials',

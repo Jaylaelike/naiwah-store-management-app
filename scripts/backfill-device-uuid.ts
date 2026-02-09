@@ -7,7 +7,7 @@ async function main() {
 
     const devices = await prisma.device.findMany({
         where: {
-            uuid: null,
+            uuid: { equals: null } as never,
         },
     });
 

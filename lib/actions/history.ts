@@ -170,11 +170,10 @@ export async function transferDevice(
     station: string | undefined
 ) {
     const session = await auth();
-    const userId = session?.user?.id ? parseInt(session.user.id) : null;
-
-    if (!userId) {
+    if (!session?.user?.id) {
         throw new Error('Unauthorized');
     }
+    const userId = parseInt(session.user.id);
 
     try {
         // Get current device location for history

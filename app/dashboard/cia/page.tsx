@@ -1,5 +1,7 @@
 import { getDevices } from '@/lib/actions/device';
 import { CiaTable } from '@/components/cia/cia-table';
+
+export const dynamic = 'force-dynamic';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CiaStats } from '@/components/cia/cia-stats';
 

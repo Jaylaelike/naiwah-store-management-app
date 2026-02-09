@@ -1,5 +1,7 @@
 import { PdfExportButton } from '@/components/devices/pdf-export-button';
 import { getDeviceHistory } from '@/lib/actions/history';
+
+export const dynamic = 'force-dynamic';
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { format } from 'date-fns';

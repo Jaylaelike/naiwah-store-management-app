@@ -1,5 +1,7 @@
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
+
+export const dynamic = 'force-dynamic';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Box, Wrench, Archive, Activity, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';

@@ -1,5 +1,7 @@
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
+
+export const dynamic = 'force-dynamic';
 import { getUsers } from '@/lib/actions/user';
 import { Sidebar } from '@/components/layout/sidebar'; // Assuming this is used in layout, but here we just need content
 import { UserList } from '@/components/admin/user-list';

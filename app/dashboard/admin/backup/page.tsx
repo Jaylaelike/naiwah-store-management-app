@@ -17,6 +17,7 @@ import {
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Download, Upload, HardDrive, Clock, FileArchive, Loader2, AlertTriangle, CheckCircle } from 'lucide-react';
+import { apiUrl } from '@/lib/utils';
 
 interface BackupInfo {
     database: {
@@ -59,7 +60,7 @@ export default function BackupPage() {
 
     const fetchInfo = useCallback(async () => {
         try {
-            const res = await fetch('/api/backup/info');
+            const res = await fetch(apiUrl('/api/backup/info'));
             if (res.ok) {
                 const data = await res.json();
                 setInfo(data);
@@ -79,7 +80,7 @@ export default function BackupPage() {
         setExporting(true);
         setMessage(null);
         try {
-            const res = await fetch('/api/backup/export');
+            const res = await fetch(apiUrl('/api/backup/export'));
             if (!res.ok) throw new Error('Export failed');
 
             const blob = await res.blob();
@@ -114,7 +115,7 @@ export default function BackupPage() {
             const formData = new FormData();
             formData.append('file', selectedFile);
 
-            const res = await fetch('/api/backup/restore', {
+            const res = await fetch(apiUrl('/api/backup/restore'), {
                 method: 'POST',
                 body: formData,
             });

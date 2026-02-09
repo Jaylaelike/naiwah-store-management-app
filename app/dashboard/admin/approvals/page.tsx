@@ -1,5 +1,7 @@
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
+
+export const dynamic = 'force-dynamic';
 import { prisma } from '@/lib/prisma';
 import { ApprovalList } from '@/components/admin/approval-list';
 import { ArrowLeft } from 'lucide-react';
