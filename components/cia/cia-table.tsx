@@ -56,7 +56,7 @@ export function CiaTable({ devices }: CiaTableProps) {
 
         const formData = new FormData();
         // Preserve existing fields
-        formData.append('assetId', device.assetId);
+        formData.append('assetId', device.assetId || '');
         formData.append('status', device.status);
         if (device.function) formData.append('function', device.function);
         if (device.deviceName) formData.append('deviceName', device.deviceName);
@@ -100,9 +100,9 @@ export function CiaTable({ devices }: CiaTableProps) {
     const stations = Array.from(new Set(devices.map(d => d.station).filter((s): s is string => !!s))).sort();
 
     const IMPORTANCE_LEVELS = [
-        '1 - ต่ำ (Low)',
-        '2 - ปานกลาง (Medium)',
-        '3 - สูง (High)'
+        '1 - ต่ำ',
+        '2 - ปานกลาง',
+        '3 - สูง'
     ];
 
     const filteredDevices = devices.filter(device => {
@@ -223,7 +223,7 @@ export function CiaTable({ devices }: CiaTableProps) {
                     <TableBody>
                         {filteredDevices.map((device) => (
                             <TableRow key={device.id}>
-                                <TableCell className="font-medium">{device.assetId}</TableCell>
+                                <TableCell className="font-medium">{device.assetId || '-'}</TableCell>
                                 <TableCell>{device.deviceName}</TableCell>
                                 <TableCell>
                                     {editingId === device.id ? (

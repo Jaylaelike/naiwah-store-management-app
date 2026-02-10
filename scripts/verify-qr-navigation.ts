@@ -31,7 +31,7 @@ async function main() {
 
     // 3. Test getDeviceByAssetId (Legacy fallback)
     try {
-        const foundByAssetId = await getDeviceByAssetId(device.assetId);
+        const foundByAssetId = await getDeviceByAssetId(device.assetId || '');
         if (foundByAssetId?.id === device.id) {
             console.log('✅ getDeviceByAssetId working correctly.');
         } else {

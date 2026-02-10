@@ -70,7 +70,7 @@ export function ApprovalList({ requests }: ApprovalListProps) {
                                     {request.device && (
                                         <div>
                                             <div className="font-semibold">Device</div>
-                                            <div>{request.device.assetId} {request.device.deviceName ? `- ${request.device.deviceName}` : ''}</div>
+                                            <div>{request.device.assetId || '-'} {request.device.deviceName ? `- ${request.device.deviceName}` : ''}</div>
                                         </div>
                                     )}
                                     <div className="col-span-2">

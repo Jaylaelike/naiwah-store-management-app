@@ -13,7 +13,7 @@ import { sendDeviceNotification } from '@/lib/email';
 
 // Define schema for input validation
 const DeviceSchema = z.object({
-    assetId: z.string().min(1, "Asset ID is required"),
+    assetId: z.string().nullable().optional(),
     status: z.string().min(1, "Status is required"),
     function: z.string().nullable().optional(),
     deviceName: z.string().nullable().optional(),
@@ -42,8 +42,9 @@ export type DeviceState = {
     message?: string | null;
 };
 
-export async function checkAssetIdUnique(assetId: string, currentId?: number) {
-    const existing = await prisma.device.findUnique({
+export async function checkAssetIdUnique(assetId: string | null | undefined, currentId?: number) {
+    if (!assetId) return true; // Null/empty assetIds are always "unique"
+    const existing = await prisma.device.findFirst({
         where: { assetId },
     });
 
@@ -81,7 +82,7 @@ export async function getDeviceById(id: number) {
 
 export async function getDeviceByAssetId(assetId: string) {
     try {
-        const device = await prisma.device.findUnique({
+        const device = await prisma.device.findFirst({
             where: { assetId },
         });
         return device;
@@ -133,14 +134,16 @@ export async function createDevice(prevState: DeviceState, formData: FormData) {
     const { assetId, status, function: functionVal, deviceName, brand, model, serialNumber, ipAddress, macAddress, section, center, station, c_score, i_score, a_score, hostId } = validatedFields.data;
 
     // ... (uniqueness check omitted) ...
-    const isUnique = await checkAssetIdUnique(assetId);
-    if (!isUnique) {
-        return {
-            errors: {
-                assetId: ['Asset ID already exists'],
-            },
-            message: 'Asset ID already exists.',
-        };
+    if (assetId) {
+        const isUnique = await checkAssetIdUnique(assetId);
+        if (!isUnique) {
+            return {
+                errors: {
+                    assetId: ['Asset ID already exists'],
+                },
+                message: 'Asset ID already exists.',
+            };
+        }
     }
 
     // Check user role
@@ -183,7 +186,7 @@ export async function createDevice(prevState: DeviceState, formData: FormData) {
                 'CREATE',
                 session?.user?.name || session?.user?.email || 'Unknown User',
                 `สร้างอุปกรณ์ใหม่\n${createDetails}`,
-                deviceName || assetId
+                deviceName || assetId || 'N/A'
             );
             // return { message: 'Request Submitted for Approval' };
         } catch (error) {
@@ -198,7 +201,7 @@ export async function createDevice(prevState: DeviceState, formData: FormData) {
         const newDevice = await prisma.device.create({
             data: {
                 uuid: uuidv7(),
-                assetId,
+                assetId: assetId || null,
                 status,
                 function: functionVal,
                 deviceName,
@@ -244,7 +247,7 @@ export async function createDevice(prevState: DeviceState, formData: FormData) {
         // Send Notification
         await sendDeviceNotification(
             'CREATE',
-            deviceName || assetId,
+            deviceName || assetId || 'N/A',
             `Asset ID: ${assetId}\nStatus: ${status}\nLocation: ${[section, center, station].filter(Boolean).join(' > ')}`,
             session?.user?.name || session?.user?.email || 'Unknown User'
         );
@@ -290,14 +293,16 @@ export async function updateDevice(id: number, prevState: DeviceState, formData:
     const { assetId, status, function: functionVal, deviceName, brand, model, serialNumber, ipAddress, macAddress, section, center, station, c_score, i_score, a_score, hostId } = validatedFields.data;
 
     // ... (uniqueness check omitted) ...
-    const isUnique = await checkAssetIdUnique(assetId, id);
-    if (!isUnique) {
-        return {
-            errors: {
-                assetId: ['Asset ID already exists'],
-            },
-            message: 'Asset ID already exists.',
-        };
+    if (assetId) {
+        const isUnique = await checkAssetIdUnique(assetId, id);
+        if (!isUnique) {
+            return {
+                errors: {
+                    assetId: ['Asset ID already exists'],
+                },
+                message: 'Asset ID already exists.',
+            };
+        }
     }
 
     // Check user role
@@ -341,7 +346,7 @@ export async function updateDevice(id: number, prevState: DeviceState, formData:
                 'UPDATE',
                 session?.user?.name || session?.user?.email || 'Unknown User',
                 `อัปเดตอุปกรณ์ ID: ${id}\n${updateDetails}`,
-                deviceName || assetId
+                deviceName || assetId || 'N/A'
             );
             // return { message: 'Update Request Submitted for Approval' };
         } catch (error) {
@@ -377,6 +382,7 @@ export async function updateDevice(id: number, prevState: DeviceState, formData:
                 where: { id },
                 data: {
                     ...newData,
+                    assetId: newData.assetId || null,
                     updatedById: userId,
                 },
             });
@@ -401,7 +407,7 @@ export async function updateDevice(id: number, prevState: DeviceState, formData:
         if (changeDetails) {
             await sendDeviceNotification(
                 'UPDATE',
-                deviceName || assetId,
+                deviceName || assetId || 'N/A',
                 changeDetails,
                 session?.user?.name || session?.user?.email || 'Unknown User'
             );
@@ -613,7 +619,7 @@ export async function updateDeviceCia(id: number, formData: FormData) {
         if (changeDetails) {
             await sendDeviceNotification(
                 'UPDATE',
-                currentDevice.deviceName || currentDevice.assetId,
+                currentDevice.deviceName || currentDevice.assetId || 'N/A',
                 `CIA Scores Update:\n${changeDetails}`,
                 session?.user?.name || session?.user?.email || 'Unknown User'
             );

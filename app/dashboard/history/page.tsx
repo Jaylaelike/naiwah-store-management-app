@@ -120,7 +120,7 @@ export default async function RepairHistoryPage(props: {
                                             day: 'numeric',
                                         })}
                                     </TableCell>
-                                    <TableCell>{record.device.assetId}</TableCell>
+                                    <TableCell>{record.device.assetId || '-'}</TableCell>
                                     <TableCell>
                                         <div className="flex flex-col">
                                             <span className="font-medium">{record.device.deviceName}</span>

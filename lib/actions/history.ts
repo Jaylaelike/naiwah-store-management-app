@@ -137,7 +137,7 @@ export async function logRepair(deviceId: number, description: string) {
         // Construct email data
         const emailData = {
             posting_date: new Date().toLocaleDateString('th-TH'),
-            asset_id: device.assetId,
+            asset_id: device.assetId || undefined,
             device_name: device.deviceName || undefined,
             brand: device.brand || undefined,
             model: device.model || undefined,
@@ -247,7 +247,7 @@ export async function transferDevice(
                 'TRANSFER',
                 session?.user?.name || session?.user?.email || 'Unknown User',
                 `โอนย้ายอุปกรณ์\nassetId: ${device.assetId}\ndeviceName: ${device.deviceName || '-'}\nจาก: ${fromLocation}\nไปยัง: ${toLocation}`,
-                device.deviceName || device.assetId
+                device.deviceName || device.assetId || 'N/A'
             );
 
             revalidatePath('/dashboard/requests');

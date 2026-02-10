@@ -90,7 +90,7 @@ export default async function DeviceDetailPage({ params }: { params: Promise<{ i
                     </Button>
                     <div>
                         <h2 className="text-3xl font-bold tracking-tight">{device.deviceName || device.assetId}</h2>
-                        <p className="text-muted-foreground">Asset ID: {device.assetId}</p>
+                        <p className="text-muted-foreground">Asset ID: {device.assetId || '-'}</p>
                     </div>
                 </div>
                 <div className="flex items-center space-x-2">
@@ -266,10 +266,10 @@ export default async function DeviceDetailPage({ params }: { params: Promise<{ i
                         </CardHeader>
                         <CardContent className="flex flex-col items-center justify-center p-6">
                             <div className="bg-white p-4 rounded-lg shadow-sm">
-                                <QRCode value={device.uuid || device.assetId} size={150} />
+                                <QRCode value={device.uuid || device.assetId || ''} size={150} />
                             </div>
                             <p className="mt-4 text-sm text-center text-muted-foreground font-mono">
-                                {device.assetId}
+                                {device.assetId || '-'}
                             </p>
                         </CardContent>
                     </Card>
@@ -308,7 +308,7 @@ export default async function DeviceDetailPage({ params }: { params: Promise<{ i
 
                         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '1rem' }}>
                             <div style={{ textAlign: 'right' }}>
-                                <p style={{ margin: 0 }}><strong>Asset ID:</strong> {device.assetId}</p>
+                                <p style={{ margin: 0 }}><strong>Asset ID:</strong> {device.assetId || '-'}</p>
                                 <p style={{ margin: 0 }}><strong>Date:</strong> {formatDate(new Date())}</p>
                             </div>
                         </div>
@@ -325,7 +325,7 @@ export default async function DeviceDetailPage({ params }: { params: Promise<{ i
                                 </div>
                                 <div style={{ padding: formalCellPadding }}>
                                     <span style={{ display: 'block', fontSize: '14px', color: '#555' }}>รหัสทรัพย์สิน (Asset ID)</span>
-                                    <strong>{device.assetId}</strong>
+                                    <strong>{device.assetId || '-'}</strong>
                                 </div>
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', borderBottom: formalBorderStyle }}>
@@ -420,7 +420,7 @@ export default async function DeviceDetailPage({ params }: { params: Promise<{ i
                                     </div>
                                 </div>
                                 <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'center' }}>
-                                    <QRCode value={device.uuid || device.assetId} size={100} />
+                                    <QRCode value={device.uuid || device.assetId || ''} size={100} />
                                 </div>
                             </div>
                         )}
@@ -558,7 +558,7 @@ export default async function DeviceDetailPage({ params }: { params: Promise<{ i
                                             </div>
                                         </div>
                                         <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'center' }}>
-                                            <QRCode value={device.uuid || device.assetId} size={100} />
+                                            <QRCode value={device.uuid || device.assetId || ''} size={100} />
                                         </div>
                                     </div>
                                 )}

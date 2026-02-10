@@ -144,7 +144,7 @@ export const columns: ColumnDef<Device & { images: DeviceImage[] }>[] = [
                     <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem
-                            onClick={() => navigator.clipboard.writeText(device.assetId)}
+                            onClick={() => navigator.clipboard.writeText(device.assetId || '')}
                         >
                             Copy Asset ID
                         </DropdownMenuItem>

@@ -39,7 +39,7 @@ model User {
 model Device {
   id           Int      @id @default(autoincrement())
   uuid         String   @unique // UUID v7
-  assetId      String   @unique
+  assetId      String?  @unique
   status       String   // Active, Repair, Disposed
   function     String?  // e.g. "Server", "Laptop"
   deviceName   String?

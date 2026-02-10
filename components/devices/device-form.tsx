@@ -30,7 +30,7 @@ import { CameraCapture } from '@/components/devices/camera-capture';
 import { useState } from 'react';
 
 const formSchema = z.object({
-    assetId: z.string().min(1, 'Asset ID is required'),
+    assetId: z.string().nullable().optional(),
     status: z.string().min(1, 'Status is required'),
     function: z.string().optional(),
     deviceName: z.string().optional(),
@@ -101,7 +101,7 @@ export function DeviceForm({ device }: DeviceFormProps) {
                             <FormItem>
                                 <FormLabel>Asset ID</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="Asset ID" {...field} />
+                                    <Input placeholder="Asset ID" {...field} value={field.value || ''} />
                                 </FormControl>
                                 <FormMessage />
                                 {state?.errors?.assetId && (

@@ -64,7 +64,7 @@ export function RepairHistoryRow({ record, children }: RepairHistoryRowProps) {
                         <div className="grid grid-cols-4 items-center gap-4">
                             <span className="font-semibold text-right col-span-1">Asset ID:</span>
                             <span className="col-span-3 font-mono bg-muted px-2 py-1 rounded w-fit text-sm">
-                                {record.device.assetId}
+                                {record.device.assetId || '-'}
                             </span>
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Device } from '@prisma/client';
 import { CiaStats } from '@/components/cia/cia-stats';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,7 +24,7 @@ import { Button } from '@/components/ui/button';
 import { updateDeviceCia } from '@/lib/actions/device';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-import { Loader2, Save, X } from 'lucide-react';
+import { Loader2, Save, X, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 
 interface CiaClientWrapperProps {
     devices: Device[];
@@ -46,6 +46,10 @@ export function CiaClientWrapper({ devices }: CiaClientWrapperProps) {
     const [iFilter, setIFilter] = useState<string>('all');
     const [aFilter, setAFilter] = useState<string>('all');
 
+    // Pagination state
+    const [currentPage, setCurrentPage] = useState(1);
+    const [pageSize, setPageSize] = useState(25);
+
     // Extract unique values for filter dropdowns
     const sections = useMemo(() =>
         Array.from(new Set(devices.map(d => d.section).filter((s): s is string => !!s))).sort(),
@@ -61,9 +65,9 @@ export function CiaClientWrapper({ devices }: CiaClientWrapperProps) {
     );
 
     const IMPORTANCE_LEVELS = [
-        '1 - ต่ำ (Low)',
-        '2 - ปานกลาง (Medium)',
-        '3 - สูง (High)'
+        '1 - ต่ำ',
+        '2 - ปานกลาง',
+        '3 - สูง'
     ];
 
     // Check if any filter is active
@@ -92,6 +96,18 @@ export function CiaClientWrapper({ devices }: CiaClientWrapperProps) {
             return cMatch && iMatch && aMatch && sectionMatch && centerMatch && stationMatch;
         });
     }, [devices, cFilter, iFilter, aFilter, sectionFilter, centerFilter, stationFilter]);
+
+    // Reset to page 1 when filters or pageSize change
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [sectionFilter, centerFilter, stationFilter, cFilter, iFilter, aFilter, pageSize]);
+
+    // Pagination computed values
+    const totalItems = filteredDevices.length;
+    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+    const startIndex = (currentPage - 1) * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, totalItems);
+    const paginatedDevices = filteredDevices.slice(startIndex, endIndex);
 
     // Edit handlers
     const handleEdit = (device: Device) => {
@@ -265,9 +281,9 @@ export function CiaClientWrapper({ devices }: CiaClientWrapperProps) {
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
-                                    {filteredDevices.map((device) => (
+                                    {paginatedDevices.map((device) => (
                                         <TableRow key={device.id}>
-                                            <TableCell className="font-medium">{device.assetId}</TableCell>
+                                            <TableCell className="font-medium">{device.assetId || '-'}</TableCell>
                                             <TableCell>{device.deviceName}</TableCell>
                                             <TableCell>
                                                 {editingId === device.id ? (
@@ -397,6 +413,67 @@ export function CiaClientWrapper({ devices }: CiaClientWrapperProps) {
                                     ))}
                                 </TableBody>
                             </Table>
+                        </div>
+
+                        {/* Pagination controls */}
+                        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <span>Rows per page:</span>
+                                <Select value={String(pageSize)} onValueChange={(val) => setPageSize(Number(val))}>
+                                    <SelectTrigger className="w-[70px] h-8">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="25">25</SelectItem>
+                                        <SelectItem value="50">50</SelectItem>
+                                        <SelectItem value="100">100</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <span className="ml-2">
+                                    {totalItems > 0 ? startIndex + 1 : 0}–{endIndex} of {totalItems}
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => setCurrentPage(1)}
+                                    disabled={currentPage === 1}
+                                >
+                                    <ChevronsLeft className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                    disabled={currentPage === 1}
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                                <span className="px-3 text-sm font-medium">
+                                    Page {currentPage} of {totalPages}
+                                </span>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                    disabled={currentPage === totalPages}
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    className="h-8 w-8"
+                                    onClick={() => setCurrentPage(totalPages)}
+                                    disabled={currentPage === totalPages}
+                                >
+                                    <ChevronsRight className="h-4 w-4" />
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </CardContent>

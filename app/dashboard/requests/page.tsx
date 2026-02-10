@@ -103,7 +103,7 @@ export default async function RequestsPage(props: RequestsPageProps) {
                                                             </div>
                                                             {request.device && (
                                                                 <div className="text-xs text-muted-foreground">
-                                                                    Device: {request.device.assetId} {request.device.deviceName ? `- ${request.device.deviceName}` : ''}
+                                                                    Device: {request.device.assetId || '-'} {request.device.deviceName ? `- ${request.device.deviceName}` : ''}
                                                                 </div>
                                                             )}
                                                         </div>
