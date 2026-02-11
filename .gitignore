@@ -50,3 +50,5 @@ app-settings.json
 backups/
 .agent
 .agents
+
+context/
