@@ -1,0 +1,2 @@
+GET http://172.16.202.63:4000/api/ird_range/%E0%B8%81%E0%B8%A3%E0%B8%B8%E0%B8%87%E0%B9%80%E0%B8%97%E0%B8%9E/1/IRD%20B HTTP/1.1
+Cache-Control: no-cache

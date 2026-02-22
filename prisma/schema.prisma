@@ -1,0 +1,158 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id          Int      @id @default(autoincrement())
+  username    String   @unique
+  password    String
+  email       String?  @unique
+  role        String   @default("User") // User, Admin
+  employeeId  String?
+  department  String?
+  division    String?
+  engName     String?
+  thaiName    String?
+  mobilePhone String?
+  position    String?
+  section     String?
+  imageUrl    String?
+  
+  createdDevices   Device[] @relation("CreatedBy")
+  updatedDevices   Device[] @relation("UpdatedBy")
+  repairHistory    RepairHistory[]
+  transferHistory  TransferHistory[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  requests      ApprovalRequest[] @relation("RequestedBy")
+  reviews       ApprovalRequest[] @relation("ReviewedBy")
+  notifications Notification[]
+  deviceAuditLogs DeviceAuditLog[] // Relation to audit logs
+}
+
+model Device {
+  id           Int      @id @default(autoincrement())
+  uuid         String   @unique // UUID v7
+  assetId      String?  @unique
+  status       String   // Active, Repair, Disposed
+  function     String?  // e.g. "Server", "Laptop"
+  deviceName   String?
+  brand        String?
+  model        String?
+  serialNumber String?
+  ipAddress    String?
+  macAddress   String?
+
+  // CIA & Host Info
+  c_score      String?  // Confidentiality
+  i_score      String?  // Integrity
+  a_score      String?  // Availability
+  hostId       String?  // Host ID / Legacy ID
+  
+  // Location
+  section      String?
+  center       String?
+  station      String?
+  
+  // Audit
+  createdById  Int?
+  createdBy    User?    @relation("CreatedBy", fields: [createdById], references: [id])
+  updatedById  Int?
+  updatedBy    User?    @relation("UpdatedBy", fields: [updatedById], references: [id])
+  
+  images          DeviceImage[]
+  repairHistory   RepairHistory[]
+  transferHistory TransferHistory[]
+  approvalRequests ApprovalRequest[]
+  auditLogs       DeviceAuditLog[] // Relation to audit logs
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DeviceImage {
+  id             Int      @id @default(autoincrement())
+  deviceId       Int
+  device         Device   @relation(fields: [deviceId], references: [id])
+  url            String   // Full URL (fallback)
+  pbCollectionId String?
+  pbRecordId     String?
+  pbFilename     String?
+  
+  createdAt      DateTime @default(now())
+}
+
+model RepairHistory {
+  id          Int      @id @default(autoincrement())
+  deviceId    Int
+  device      Device   @relation(fields: [deviceId], references: [id])
+  description String
+  repairDate  DateTime @default(now())
+  loggedById  Int?
+  loggedBy    User?    @relation(fields: [loggedById], references: [id])
+  
+  createdAt DateTime @default(now())
+}
+
+model TransferHistory {
+  id           Int      @id @default(autoincrement())
+  deviceId     Int
+  device       Device   @relation(fields: [deviceId], references: [id])
+  fromLocation String?
+  toLocation   String?
+  approvedById Int?
+  approvedBy   User?    @relation(fields: [approvedById], references: [id])
+  transferDate DateTime @default(now())
+  
+  createdAt DateTime @default(now())
+}
+
+model ApprovalRequest {
+  id          Int      @id @default(autoincrement())
+  type        String   // CREATE, UPDATE, DELETE
+  status      String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  payload     String   // JSON string of the data
+  
+  deviceId    Int?
+  device      Device?  @relation(fields: [deviceId], references: [id])
+  
+  requestedById Int
+  requestedBy   User   @relation("RequestedBy", fields: [requestedById], references: [id])
+  
+  reviewedById  Int?
+  reviewedBy    User?  @relation("ReviewedBy", fields: [reviewedById], references: [id])
+  
+  reason      String?  // Rejection reason
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  title     String
+  message   String
+  type      String   @default("INFO") // INFO, SUCCESS, WARNING, ERROR
+  isRead    Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+}
+
+model DeviceAuditLog {
+  id        Int      @id @default(autoincrement())
+  deviceId  Int
+  device    Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  action    String   // UPDATE, CREATE (optional, as create has explicit creator)
+  details   String   // JSON string of changes { field: { old: val, new: val } }
+  createdAt DateTime @default(now())
+}
